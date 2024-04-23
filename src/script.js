@@ -20,6 +20,7 @@ import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js'  // ANT
 
 import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js'
 import { RGBShiftShader } from 'three/examples/jsm/shaders/RGBShiftShader.js'
+import { gsap } from "gsap"
 
 import GUI from 'lil-gui'
 
@@ -48,13 +49,74 @@ const scene = new THREE.Scene()
 
 
 
-
 /**
  * Loaders
  */
-const gltfLoader = new GLTFLoader()
-const cubeTextureLoader = new THREE.CubeTextureLoader()
-const textureLoader = new THREE.TextureLoader()
+
+const loadingBarElement = document.querySelector(".loading-bar")
+
+const loadingManager = new THREE.LoadingManager(
+    //loaded
+    () =>
+    {
+        window.setTimeout(()=>{
+
+            gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value : 0})
+        loadingBarElement.classList.add("ended")
+        loadingBarElement.style.transform = ""
+
+
+        }, 600)
+
+        
+
+    },
+    //progress
+    (itemUrl, itemsLoaded, itemsTotal) =>
+    {
+
+        const progressRatio = itemsLoaded/itemsTotal
+        loadingBarElement.style.transform = `scaleX(${progressRatio})`
+
+    }
+)
+const gltfLoader = new GLTFLoader(loadingManager)
+const cubeTextureLoader = new THREE.CubeTextureLoader(loadingManager)
+const textureLoader = new THREE.TextureLoader(loadingManager)
+
+
+
+
+//OVERLAY
+
+const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1,)
+const overlayMaterial = new THREE.ShaderMaterial(
+    {
+        transparent:true,
+        uniforms: {
+            uAlpha: {value: 1}
+        },
+    vertexShader:`
+        void main ()
+        {
+            gl_Position = vec4(position, 1.0);
+        }
+        
+        `,
+        fragmentShader: `
+        uniform float uAlpha;
+        
+        void main()
+        {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+        }
+        `
+        
+
+    })
+
+const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
+scene.add(overlay)
 
 /**
  * Update all materials
